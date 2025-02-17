@@ -18,11 +18,14 @@ func TestUnpack(t *testing.T) {
 		{input: "aaa0b", expected: "aab"},
 		{input: "🙃0", expected: ""},
 		{input: "aaф0b", expected: "aab"},
+		{input: "фф0уу0бар3", expected: "фубаррр"},
+		{input: "\u00004", expected: "\u0000\u0000\u0000\u0000"},
+		{input: "🙄2🤖3🚐🙄🤖🚐0", expected: "🙄🙄🤖🤖🤖🚐🙄🤖"},
 		// uncomment if task with asterisk completed
-		// {input: `qwe\4\5`, expected: `qwe45`},
-		// {input: `qwe\45`, expected: `qwe44444`},
-		// {input: `qwe\\5`, expected: `qwe\\\\\`},
-		// {input: `qwe\\\3`, expected: `qwe\3`},
+		{input: `qwe\4\5`, expected: `qwe45`},
+		{input: `qwe\45`, expected: `qwe44444`},
+		{input: `qwe\\5`, expected: `qwe\\\\\`},
+		{input: `qwe\\\3`, expected: `qwe\3`},
 	}
 
 	for _, tc := range tests {
@@ -36,12 +39,20 @@ func TestUnpack(t *testing.T) {
 }
 
 func TestUnpackInvalidString(t *testing.T) {
-	invalidStrings := []string{"3abc", "45", "aaa10b"}
+	invalidStrings := []string{"3abc", "45", "aaa10b", `qwe\`, `\qqq`}
 	for _, tc := range invalidStrings {
 		tc := tc
 		t.Run(tc, func(t *testing.T) {
 			_, err := Unpack(tc)
 			require.Truef(t, errors.Is(err, ErrInvalidString), "actual error %q", err)
 		})
+	}
+}
+
+func BenchmarkUnpack(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		if _, err := Unpack("a4bc0ee0\u00007"); err != nil {
+			b.Fatalf("%v", err)
+		}
 	}
 }
