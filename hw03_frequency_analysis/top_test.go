@@ -48,6 +48,24 @@ func TestTop10(t *testing.T) {
 		require.Len(t, Top10(""), 0)
 	})
 
+	t.Run("less than 10 words", func(t *testing.T) {
+		text := "a a a a b b cccccccc c c"
+		expected := []string{"a", "b", "c", "cccccccc"}
+		require.Equal(t, expected, Top10(text))
+	})
+
+	t.Run("lexicographical order of words with the same frequencies", func(t *testing.T) {
+		text := "b b b a a a c c c ф ф ф а а а" // a eng + a rus
+		expected := []string{"a", "b", "c", "а", "ф"}
+		require.Equal(t, expected, Top10(text))
+	})
+
+	t.Run("different space separators", func(t *testing.T) {
+		text := "a\nb\tc\rd          e"
+		expected := []string{"a", "b", "c", "d", "e"}
+		require.Equal(t, expected, Top10(text))
+	})
+
 	t.Run("positive test", func(t *testing.T) {
 		if taskWithAsteriskIsCompleted {
 			expected := []string{
@@ -79,4 +97,10 @@ func TestTop10(t *testing.T) {
 			require.Equal(t, expected, Top10(text))
 		}
 	})
+}
+
+func BenchmarkTop10(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = Top10(text)
+	}
 }
