@@ -1,11 +1,11 @@
 package hw10programoptimization
 
 import (
-	"encoding/json"
-	"fmt"
+	"bufio"
+	"bytes"
 	"io"
-	"regexp"
-	"strings"
+
+	"github.com/buger/jsonparser"
 )
 
 type User struct {
@@ -21,46 +21,41 @@ type User struct {
 type DomainStat map[string]int
 
 func GetDomainStat(r io.Reader, domain string) (DomainStat, error) {
-	u, err := getUsers(r)
-	if err != nil {
-		return nil, fmt.Errorf("get users error: %w", err)
+	stat := make(DomainStat)
+	domainSuffix := []byte{}
+	if len(domain) > 0 {
+		domainSuffix = []byte("." + domain)
 	}
-	return countDomains(u, domain)
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		addr, fieldType, _, err := jsonparser.Get(scanner.Bytes(), "Email")
+		if err != nil || fieldType != jsonparser.String {
+			continue
+		}
+		if atCharIdx := fixAddr(addr, domainSuffix); atCharIdx != -1 {
+			stat[string(addr[atCharIdx+1:])]++
+		}
+	}
+	return stat, nil
 }
 
-type users [100_000]User
-
-func getUsers(r io.Reader) (result users, err error) {
-	content, err := io.ReadAll(r)
-	if err != nil {
-		return
-	}
-
-	lines := strings.Split(string(content), "\n")
-	for i, line := range lines {
-		var user User
-		if err = json.Unmarshal([]byte(line), &user); err != nil {
-			return
+// fixAddr replaces uppercase letters with lowercase and
+// returns index of the latest character '@'
+// if the character is not the last one in buf
+// and if lowercase version of buf ends with domain characters. Otherwise,
+// the function returns -1, meanwhile, buf can be left modified.
+func fixAddr(buf []byte, suffix []byte) (atCharIdx int) {
+	atCharIdx = -1
+	for i := range buf {
+		if buf[i] >= 'A' && buf[i] <= 'Z' {
+			buf[i] += 0x20
 		}
-		result[i] = user
+		if buf[i] == '@' {
+			atCharIdx = i
+		}
+	}
+	if !bytes.HasSuffix(buf, suffix) || atCharIdx == len(buf)-1 {
+		atCharIdx = -1
 	}
 	return
-}
-
-func countDomains(u users, domain string) (DomainStat, error) {
-	result := make(DomainStat)
-
-	for _, user := range u {
-		matched, err := regexp.Match("\\."+domain, []byte(user.Email))
-		if err != nil {
-			return nil, err
-		}
-
-		if matched {
-			num := result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])]
-			num++
-			result[strings.ToLower(strings.SplitN(user.Email, "@", 2)[1])] = num
-		}
-	}
-	return result, nil
 }
