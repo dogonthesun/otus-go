@@ -54,6 +54,7 @@ linters:
             - '!$test'
           allow:
             - $gostd
+            - github.com/buger/jsonparser
         Test:
           files:
             - $test
