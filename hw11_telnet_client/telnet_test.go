@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	"errors"
+	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -62,4 +64,26 @@ func TestTelnetClient(t *testing.T) {
 
 		wg.Wait()
 	})
+}
+
+func TestTelnetClientTimeout(t *testing.T) {
+	t.Parallel()
+	timeouts := []time.Duration{time.Second, time.Second * 3, time.Second * 5}
+
+	for _, timeout := range timeouts {
+		t.Run(fmt.Sprintf("timeout %d", timeout), func(t *testing.T) {
+			t.Parallel()
+
+			// https://www.rfc-editor.org/rfc/rfc5737#section-3
+			client := NewTelnetClient("192.0.2.1:9999", timeout, nil, nil)
+
+			start := time.Now()
+			err := client.Connect()
+			duration := time.Since(start)
+
+			var netErr *net.OpError
+			require.ErrorAs(t, errors.Unwrap(err), &netErr)
+			require.Equal(t, duration.Truncate(time.Second), timeout)
+		})
+	}
 }
