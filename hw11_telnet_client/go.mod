@@ -1,6 +1,6 @@
-module github.com/fixme_my_friend/hw11_telnet_client
+module github.com/dogonthesun/otus-go/hw11_telnet_client
 
-go 1.22
+go 1.24
 
 require github.com/stretchr/testify v1.7.0
 
